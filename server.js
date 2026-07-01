@@ -33,6 +33,20 @@ import { createLearningAnalyticsRoutes } from "./learning-analytics-routes.js";
 
 dotenv.config();
 
+// Fail-closed: require critical secrets at startup
+const requiredSecrets = ["JWT_SECRET", "SESSION_SECRET"];
+const missingSecrets = requiredSecrets.filter(
+  (key) => !process.env[key] || process.env[key].trim() === "",
+);
+if (missingSecrets.length > 0) {
+  console.error(
+    `FATAL: Missing required environment variable(s): ${missingSecrets.join(", ")}. ` +
+      "The server cannot start without these secrets. " +
+      "See .env.example for required configuration.",
+  );
+  process.exit(1);
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -134,7 +148,7 @@ app.use(generalLimiter);
 // Session middleware for Discourse SSO
 app.use(
   session({
-    secret: process.env.JWT_SECRET || "your-secret-key-change-in-production",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -167,8 +181,7 @@ app.get("/", (req, res) => {
 });
 
 // JWT configuration
-const JWT_SECRET =
-  process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "7d";
 
 // Discourse SSO configuration
