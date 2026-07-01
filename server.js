@@ -2013,8 +2013,8 @@ app.post(
 
       await client.query("BEGIN");
 
-      // Get deck info from Anki
-      const _decks = ankiDb.prepare("SELECT * FROM col").get();
+      // Validate that the uploaded file is a proper Anki database (throws if col table is missing)
+      ankiDb.prepare("SELECT * FROM col").get();
       const deckName = req.body.deckName || "Imported Deck";
 
       // Create deck in our database
