@@ -44,7 +44,7 @@ if (missingSecrets.length > 0) {
       "The server cannot start without these secrets. " +
       "See .env.example for required configuration.",
   );
-  process.exit(1);
+  process.exit(1); // skipcq: JS-0263 -- intentional fail-closed startup guard: halt boot when required secrets are absent
 }
 
 const __filename = fileURLToPath(import.meta.url);
