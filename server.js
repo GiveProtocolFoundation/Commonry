@@ -10,6 +10,7 @@ import rateLimit from "express-rate-limit";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
 import { ulid } from "ulid";
 import crypto from "crypto";
@@ -55,6 +56,45 @@ const app = express();
 // Trust proxy headers from Cloudflare Tunnel
 // This is required for proper rate limiting and security when behind a reverse proxy
 app.set("trust proxy", true);
+
+// Security headers via helmet
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: [
+          "'self'",
+          "https://forum.commonry.app",
+          "https://fonts.googleapis.com",
+          "https://sql.js.org",
+        ],
+        frameSrc: ["https://forum.commonry.app"],
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    // HSTS: 1 year, include subdomains, allow preload
+    strictTransportSecurity: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    // X-Content-Type-Options: nosniff (helmet default, explicit for clarity)
+    xContentTypeOptions: true,
+    // X-Frame-Options: DENY (supplements CSP frame-ancestors)
+    xFrameOptions: { action: "deny" },
+    // Referrer-Policy: strict-origin-when-cross-origin
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  }),
+);
 
 const UPLOADS_DIR = path.resolve(__dirname, "uploads");
 const upload = multer({ dest: UPLOADS_DIR });
