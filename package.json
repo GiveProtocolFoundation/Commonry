@@ -35,11 +35,13 @@
     "dexie": "^4.4.2",
     "dompurify": "^3.4.11",
     "dotenv": "^17.3.1",
+    "express": "5.2.1",
     "express-rate-limit": "^8.3.2",
     "express-session": "1.19.0",
     "framer-motion": "^12.38.0",
     "fuse.js": "^7.3.0",
     "fzstd": "^0.1.1",
+    "helmet": "8.3.0",
     "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
     "lucide-react": "^1.8.0",
@@ -58,8 +60,8 @@
     "zustand": "5.0.12"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.2",
     "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "^4.2.2",
     "@types/bcryptjs": "^3.0.0",
     "@types/cors": "^2.8.19",
     "@types/dompurify": "^3.2.0",
