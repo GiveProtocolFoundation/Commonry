@@ -63,14 +63,15 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "https://fonts.googleapis.com"],
+        scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:"],
+        imgSrc: ["'self'", "data:", "blob:"],
         connectSrc: [
           "'self'",
           "https://forum.commonry.app",
           "https://fonts.googleapis.com",
+          "https://sql.js.org",
         ],
         frameSrc: ["https://forum.commonry.app"],
         frameAncestors: ["'none'"],
