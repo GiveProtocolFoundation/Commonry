@@ -15,7 +15,7 @@
     "lint:fix": "eslint . --fix"
   },
   "keywords": [],
-  "author": "",
+  "author": "Give Protocol Foundation",
   "license": "ISC",
   "overrides": {
     "tailwindcss": "4.2.2"
@@ -84,11 +84,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GiveProtocol/AestheticAnki.git"
+    "url": "git+https://github.com/GiveProtocolFoundation/Commonry.git"
   },
   "bugs": {
-    "url": "https://github.com/GiveProtocol/AestheticAnki/issues"
+    "url": "https://github.com/GiveProtocolFoundation/Commonry/issues"
   },
-  "homepage": "https://github.com/GiveProtocol/AestheticAnki#readme",
+  "homepage": "https://commonry.app",
   "description": "Your commons for lifelong learning"
 }
