@@ -10,6 +10,7 @@ import rateLimit from "express-rate-limit";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
 import { ulid } from "ulid";
 import crypto from "crypto";
@@ -33,6 +34,20 @@ import { createLearningAnalyticsRoutes } from "./learning-analytics-routes.js";
 
 dotenv.config();
 
+// Fail-closed: require critical secrets at startup
+const requiredSecrets = ["JWT_SECRET", "SESSION_SECRET"];
+const missingSecrets = requiredSecrets.filter(
+  (key) => !process.env[key] || process.env[key].trim() === "",
+);
+if (missingSecrets.length > 0) {
+  console.error(
+    `FATAL: Missing required environment variable(s): ${missingSecrets.join(", ")}. ` +
+      "The server cannot start without these secrets. " +
+      "See .env.example for required configuration.",
+  );
+  process.exit(1); // skipcq: JS-0263 -- intentional fail-closed startup guard: halt boot when required secrets are absent
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -41,6 +56,45 @@ const app = express();
 // Trust proxy headers from Cloudflare Tunnel
 // This is required for proper rate limiting and security when behind a reverse proxy
 app.set("trust proxy", true);
+
+// Security headers via helmet
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: [
+          "'self'",
+          "https://forum.commonry.app",
+          "https://fonts.googleapis.com",
+          "https://sql.js.org",
+        ],
+        frameSrc: ["https://forum.commonry.app"],
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    // HSTS: 1 year, include subdomains, allow preload
+    strictTransportSecurity: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    // X-Content-Type-Options: nosniff (helmet default, explicit for clarity)
+    xContentTypeOptions: true,
+    // X-Frame-Options: DENY (supplements CSP frame-ancestors)
+    xFrameOptions: { action: "deny" },
+    // Referrer-Policy: strict-origin-when-cross-origin
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  }),
+);
 
 const UPLOADS_DIR = path.resolve(__dirname, "uploads");
 const upload = multer({ dest: UPLOADS_DIR });
@@ -134,7 +188,7 @@ app.use(generalLimiter);
 // Session middleware for Discourse SSO
 app.use(
   session({
-    secret: process.env.JWT_SECRET || "your-secret-key-change-in-production",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -146,9 +200,40 @@ app.use(
   }),
 );
 
-// CSRF protection removed - not needed for JWT-based API authentication
-// JWT tokens are sent via Authorization header, not cookies, so they're not vulnerable to CSRF
-// Discourse SSO is protected by signed payloads (sig parameter) instead
+// CSRF protection via Origin/Referer validation (GIV-617, CodeQL alert #29)
+// JWT auth uses the Authorization header, which browsers never attach cross-site,
+// but the Discourse SSO session cookie IS ambient credential state. Token-based
+// CSRF (lusca) breaks the cross-origin SPA, so instead we reject state-mutating
+// requests whose browser-supplied Origin/Referer is not an allowed origin.
+const CSRF_SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+app.use((req, res, next) => {
+  if (CSRF_SAFE_METHODS.has(req.method)) {
+    return next();
+  }
+
+  let source = req.headers.origin;
+  if (!source && req.headers.referer) {
+    try {
+      source = new URL(req.headers.referer).origin;
+    } catch {
+      return res.status(403).json({ error: "Invalid Referer header" });
+    }
+  }
+
+  // No Origin and no Referer means a non-browser client (curl, mobile app,
+  // server-to-server). Those carry no ambient cookie credentials, so CSRF
+  // does not apply - allow them through to normal authentication.
+  if (!source) {
+    return next();
+  }
+
+  if (allowedOrigins.includes(source)) {
+    return next();
+  }
+
+  console.warn(`CSRF blocked cross-site ${req.method} from origin: ${source}`);
+  return res.status(403).json({ error: "Cross-site request rejected" });
+});
 
 // Root route - API info
 app.get("/", (req, res) => {
@@ -167,8 +252,7 @@ app.get("/", (req, res) => {
 });
 
 // JWT configuration
-const JWT_SECRET =
-  process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "7d";
 
 // Discourse SSO configuration
