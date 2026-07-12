@@ -188,7 +188,7 @@ const authenticateToken = (req, res, next) => {
     req.userId = decoded.userId;
     next();
     return null;
-  } catch (error) {
+  } catch {
     return res.status(403).json({ error: "Invalid or expired token" });
   }
 };
@@ -691,7 +691,8 @@ app.post("/api/discourse/complete-sso", authenticateToken, async (req, res) => {
     // Check if there's a pending SSO request
     const pendingSso = req.session.pendingSso;
     if (!pendingSso || !pendingSso.sso || !pendingSso.sig) {
-      return res.status(400).json({ error: "No pending SSO request" });
+      res.status(400).json({ error: "No pending SSO request" });
+      return;
     }
 
     // Get user profile
@@ -703,13 +704,15 @@ app.post("/api/discourse/complete-sso", authenticateToken, async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "User not found" });
+      return;
     }
 
     const user = userResult.rows[0];
 
     if (!user.email_verified) {
-      return res.status(403).json({ error: "Email not verified" });
+      res.status(403).json({ error: "Email not verified" });
+      return;
     }
 
     // Process SSO
@@ -721,7 +724,8 @@ app.post("/api/discourse/complete-sso", authenticateToken, async (req, res) => {
     );
 
     if (!ssoResult) {
-      return res.status(400).json({ error: "Invalid SSO request" });
+      res.status(400).json({ error: "Invalid SSO request" });
+      return;
     }
 
     // Clear pending SSO
@@ -731,7 +735,7 @@ app.post("/api/discourse/complete-sso", authenticateToken, async (req, res) => {
     console.log(
       `[SSO] Completed pending SSO for user: ${sanitizeForLog(user.username)}`,
     );
-    return res.json({ redirectUrl: ssoResult.redirectUrl });
+    res.json({ redirectUrl: ssoResult.redirectUrl });
   } catch (error) {
     console.error("Complete SSO error:", error);
     res.status(500).json({ error: "Failed to complete SSO" });
@@ -783,17 +787,19 @@ app.get("/api/discourse/sso", async (req, res) => {
 
   // Validate required parameters
   if (!sso || !sig) {
-    return res.status(400).json({
+    res.status(400).json({
       error: "Missing SSO parameters. Required: sso and sig query params.",
     });
+    return;
   }
 
   // Validate Discourse SSO secret is configured
   if (!DISCOURSE_SSO_SECRET) {
     console.error("DISCOURSE_SSO_SECRET not configured");
-    return res.status(500).json({
+    res.status(500).json({
       error: "SSO not configured on server",
     });
+    return;
   }
 
   try {
@@ -806,16 +812,18 @@ app.get("/api/discourse/sso", async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "User not found" });
+      return;
     }
 
     const user = userResult.rows[0];
 
     // Ensure email is verified before allowing SSO
     if (!user.email_verified) {
-      return res.status(403).json({
+      res.status(403).json({
         error: "Email must be verified before accessing the forum",
       });
+      return;
     }
 
     // Handle the SSO request and generate redirect URL
@@ -827,18 +835,17 @@ app.get("/api/discourse/sso", async (req, res) => {
     );
 
     if (!ssoResponse) {
-      return res.status(400).json({
+      res.status(400).json({
         error: "Invalid SSO signature or payload",
       });
+      return;
     }
 
     // Redirect user back to Discourse with signed response
     res.redirect(ssoResponse.redirectUrl);
-    return null;
   } catch (error) {
     console.error("Discourse SSO error:", error);
     res.status(500).json({ error: "Failed to process SSO request" });
-    return null;
   }
 });
 
@@ -2074,7 +2081,7 @@ app.post(
             dirReal = dirReal + path.sep;
           }
           return fileReal.startsWith(dirReal);
-        } catch (e) {
+        } catch {
           // Could not resolve path; treat as not contained
           return false;
         }
@@ -2102,7 +2109,7 @@ app.post(
             );
             // Get the canonical path for symlink protection
             uploadedFileRealPath = fs.realpathSync(absUploadedPath);
-          } catch (e) {
+          } catch {
             // If realpathSync fails, keep as null
             uploadedFileRealPath = null;
           }
