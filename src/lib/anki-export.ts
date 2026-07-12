@@ -159,6 +159,7 @@ export async function exportAnkiDeck(
     console.error("Error exporting Anki deck:", error);
     throw new Error(
       `Failed to export Anki deck: ${error instanceof Error ? error.message : "Unknown error"}`,
+      { cause: error },
     );
   }
 }
