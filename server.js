@@ -200,9 +200,40 @@ app.use(
   }),
 );
 
-// CSRF protection removed - not needed for JWT-based API authentication
-// JWT tokens are sent via Authorization header, not cookies, so they're not vulnerable to CSRF
-// Discourse SSO is protected by signed payloads (sig parameter) instead
+// CSRF protection via Origin/Referer validation (GIV-617, CodeQL alert #29)
+// JWT auth uses the Authorization header, which browsers never attach cross-site,
+// but the Discourse SSO session cookie IS ambient credential state. Token-based
+// CSRF (lusca) breaks the cross-origin SPA, so instead we reject state-mutating
+// requests whose browser-supplied Origin/Referer is not an allowed origin.
+const CSRF_SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+app.use((req, res, next) => {
+  if (CSRF_SAFE_METHODS.has(req.method)) {
+    return next();
+  }
+
+  let source = req.headers.origin;
+  if (!source && req.headers.referer) {
+    try {
+      source = new URL(req.headers.referer).origin;
+    } catch {
+      return res.status(403).json({ error: "Invalid Referer header" });
+    }
+  }
+
+  // No Origin and no Referer means a non-browser client (curl, mobile app,
+  // server-to-server). Those carry no ambient cookie credentials, so CSRF
+  // does not apply - allow them through to normal authentication.
+  if (!source) {
+    return next();
+  }
+
+  if (allowedOrigins.includes(source)) {
+    return next();
+  }
+
+  console.warn(`CSRF blocked cross-site ${req.method} from origin: ${source}`);
+  return res.status(403).json({ error: "Cross-site request rejected" });
+});
 
 // Root route - API info
 app.get("/", (req, res) => {
