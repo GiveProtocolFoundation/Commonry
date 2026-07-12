@@ -11,8 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
-    "lint": "eslint . --ext .ts,.tsx",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [],
   "author": "",
@@ -45,7 +45,7 @@
     "lucide-react": "^1.8.0",
     "lusca": "^1.7.0",
     "multer": "^2.1.1",
-    "nodemailer": "^8.0.5",
+    "nodemailer": "9.0.3",
     "pg": "^8.20.0",
     "react": "19.2.5",
     "react-dom": "19.2.5",
@@ -58,8 +58,8 @@
     "zustand": "5.0.12"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.2",
     "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "^4.2.2",
     "@types/bcryptjs": "^3.0.0",
     "@types/cors": "^2.8.19",
     "@types/dompurify": "^3.2.0",

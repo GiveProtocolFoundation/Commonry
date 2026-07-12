@@ -201,7 +201,7 @@ const authenticateToken = (req, res, next) => {
     req.userId = decoded.userId;
     next();
     return null;
-  } catch (error) {
+  } catch {
     return res.status(403).json({ error: "Invalid or expired token" });
   }
 };
@@ -2087,7 +2087,7 @@ app.post(
             dirReal = dirReal + path.sep;
           }
           return fileReal.startsWith(dirReal);
-        } catch (e) {
+        } catch {
           // Could not resolve path; treat as not contained
           return false;
         }
@@ -2115,7 +2115,7 @@ app.post(
             );
             // Get the canonical path for symlink protection
             uploadedFileRealPath = fs.realpathSync(absUploadedPath);
-          } catch (e) {
+          } catch {
             // If realpathSync fails, keep as null
             uploadedFileRealPath = null;
           }
